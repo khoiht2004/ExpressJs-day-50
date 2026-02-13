@@ -59,8 +59,8 @@ function createRateLimiter({ windowMs, maxRequest, message }) {
 }
 
 const apiRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 phút
-  maxRequest: 100, // Tối đa 100 requests
+  windowMs: 5 * 60 * 1000, // 5 phút
+  maxRequest: 5, // Tối đa 5 requests
   message: "Too many requests",
 });
 
