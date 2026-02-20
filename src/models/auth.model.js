@@ -14,10 +14,7 @@ const register = async (email, password) => {
     insertId,
   ]);
 
-  return {
-    id: users[0].id,
-    email: users[0].email,
-  };
+  return users;
 };
 
 const login = async (email) => {

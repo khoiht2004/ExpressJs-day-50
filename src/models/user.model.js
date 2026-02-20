@@ -1,11 +1,9 @@
 const db = require("@/database/database");
 
-async function searchUserByEmail(email1, email2) {
+async function searchUserByEmail(currentUserEmail, q) {
   const users = await db.query(
-    `
-    SELECT id, email from users
-    WHERE  email != ? AND email = ? `,
-    [email1, email2],
+    `SELECT id, email from users WHERE email LIKE ? AND email != ? `,
+    [`%${q}%`, currentUserEmail],
   );
   return users;
 }

@@ -3,15 +3,39 @@ const model = require("@/models/auth.model");
 const AuthService = require("@/services/AuthService");
 
 async function register(req, res) {
-  const email = req.body.email;
+  const { email, password } = req.body;
   const saltRounds = 10;
 
-  const password = await bcrypt.hash(req.body.password, saltRounds);
-  const register = await model.register(email, password);
+  // Kiểm tra email và password không rỗng
+  if (!email || !password) {
+    return res.error(400, "Email and password are required");
+  }
 
-  if (!register) res.error(409, "Email already exists");
+  // Kiểm tra định dạng email đơn giản (kiểm tra có @ và .)
+  const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.error(400, "Invalid email format");
+  }
 
-  res.success(201, register);
+  // Kiểm tra password không quá ngắn
+  if (password.length < 6) {
+    return res.error(400, "Password must be at least 6 characters");
+  }
+
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+  const users = await model.register(email, hashedPassword);
+
+  const user = users[0];
+  if (!user) res.error(409, "Email already exists");
+
+  const { accessToken, timeExp } = await AuthService.signAccessToken(user);
+
+  return res.success(201, {
+    id: user.id,
+    email: user.email,
+    access_token: accessToken,
+    expired_at: timeExp,
+  });
 }
 
 async function login(req, res) {
