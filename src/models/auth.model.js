@@ -32,4 +32,6 @@ const getUserById = async (id) => {
   return rows[0];
 };
 
+
+
 module.exports = { login, register, getUserById };

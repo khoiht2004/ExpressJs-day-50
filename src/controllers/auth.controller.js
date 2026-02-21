@@ -69,4 +69,6 @@ async function getMe(req, res) {
   });
 }
 
-module.exports = { register, login, getMe };
+async function refreshToken(req, res) {}
+
+module.exports = { register, login, getMe, refreshToken };
