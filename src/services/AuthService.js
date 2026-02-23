@@ -2,9 +2,11 @@ const jwt = require("jsonwebtoken");
 const { auth } = require("@/config");
 const base64 = require("@/utils/base64");
 const crypto = require("node:crypto");
+const generateKey = require("@/utils/generateKey");
+const model = require("@/models/auth.model");
 
 /**
- * JWT bảo mật và chống giả mạo nhờ phần Signature (chữ ký). 
+ * JWT bảo mật và chống giả mạo nhờ phần Signature (chữ ký).
  * Chữ ký được tạo bằng cách băm (hash) tổ hợp Header + Payload cùng với một Secret Key bí mật.
  * Nếu bất kỳ thông tin nào trong Header hoặc Payload bị thay đổi, chữ ký sẽ không còn khớp,
  * giúp server phát hiện ngay lập tức hành vi giả mạo.
@@ -64,6 +66,13 @@ class AuthService {
 
   async verifyAccessToken(accessToken) {
     return await jwt.verify(accessToken, auth.jwtSecret);
+  }
+
+  async createRefreshToken(user) {
+    const refreshToken = generateKey();
+    const timeExp = new Date(Date.now() + 60 * 60 * 24 * 7); // Token hết hạn sau 7 ngày
+    await model.createRefreshToken(user.id, refreshToken, timeExp);
+    return refreshToken;
   }
 }
 

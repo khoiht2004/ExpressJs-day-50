@@ -48,12 +48,14 @@ async function login(req, res) {
   const isMatch = await bcrypt.compare(password, user.password);
   if (isMatch) {
     const { accessToken, timeExp } = await AuthService.signAccessToken(user);
+    const refreshToken = await AuthService.createRefreshToken(user);
 
     return res.success(200, {
       id: user.id,
       email: user.email,
       access_token: accessToken,
       expired_at: timeExp,
+      refresh_token: refreshToken,
     });
   }
 
@@ -63,12 +65,35 @@ async function login(req, res) {
 async function getMe(req, res) {
   const user = req.currentUser;
 
+  return res.success(200, user);
+}
+
+async function logout(req, res) {
+  const { accessToken, tokenPayload } = req;
+  const expiresAt = new Date(tokenPayload.exp * 1000);
+
+  await model.logout(accessToken, expiresAt);
+  res.success(204, null);
+}
+
+async function refreshToken(req, res) {
+  const { refresh_token } = req.body;
+  if (!refresh_token) res.error(400, "Refresh token is required");
+
+  const refreshTokenDB = await model.getRefreshToken(refresh_token);
+  if (!refreshTokenDB) res.error(401, "Refresh token is invalid");
+
+  const user = await model.getUserById(refreshTokenDB[0].user_id);
+
+  const { accessToken } = await AuthService.signAccessToken(user);
+  const refreshToken = await AuthService.createRefreshToken(user);
+
+  await model.deleteRefreshToken(refreshTokenDB[0].id);
+
   return res.success(200, {
-    ...user,
-    password: "Đố biết mật khẩu là gì ?",
+    access_token: accessToken,
+    refresh_token: refreshToken,
   });
 }
 
-async function refreshToken(req, res) {} 
-
-module.exports = { register, login, getMe, refreshToken };
+module.exports = { register, login, getMe, logout, refreshToken };
