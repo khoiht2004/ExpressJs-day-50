@@ -13,7 +13,7 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n    \"email\": \"\",\r\n    \"password\": \"\"\r\n}",
+          "raw": "{\r\n    \"email\": \"user7@example.com\",\r\n    \"password\": \"password\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -43,7 +43,7 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n    \"email\": \"user2@example.com\",\r\n    \"password\": \"password\"\r\n}",
+          "raw": "{\r\n    \"email\": \"user6@example.com\",\r\n    \"password\": \"password\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -67,6 +67,70 @@
       "response": []
     },
     {
+      "name": "Logout",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsImV4cCI6MTc3MTg0MTc2OCwiaWF0IjoxNzcxODM4MTY4fQ.ofiQ2ldS20XZwfkVWvfJvyRVIys2RLiD2RDObDDIA2w",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/auth/logout",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "auth",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Refresh-token",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"refresh_token\": \"4ac29c6e54f5b386e4495195f4f7a2747af0fc499127d7fedf255b76a9e5de7df8fc6a06b8104303\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/refresh-token",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "auth",
+            "refresh-token"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Get me",
       "protocolProfileBehavior": {
         "disableBodyPruning": true
@@ -77,7 +141,7 @@
           "bearer": [
             {
               "key": "token",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsImV4cCI6MTc3MTAzNjgyOCwiaWF0IjoxNzcwOTUwNDI4fQ.18TJw9lrmDJ2KY7Lw11ejpXY1u9PO4wkUJfDy2KdlKQ",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsImV4cCI6MTc3MTg0MTc2OCwiaWF0IjoxNzcxODM4MTY4fQ.ofiQ2ldS20XZwfkVWvfJvyRVIys2RLiD2RDObDDIA2w",
               "type": "string"
             }
           ]
@@ -241,7 +305,7 @@
           "bearer": [
             {
               "key": "token",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsImV4cCI6MTc3MTAzNjgyOCwiaWF0IjoxNzcwOTUwNDI4fQ.18TJw9lrmDJ2KY7Lw11ejpXY1u9PO4wkUJfDy2KdlKQ",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjcsImV4cCI6MTc3MTU4MDk4OCwiaWF0IjoxNzcxNTc3Mzg4fQ.pfEg6Xsewnrp3JuyJTJbPE7YO9sJNmd_rQnN9TY29qs",
               "type": "string"
             }
           ]
@@ -250,7 +314,7 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n    \"content\": \"ALO BLO CLO\"\r\n}",
+          "raw": "{\r\n    \"content\": \"Test send message\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
