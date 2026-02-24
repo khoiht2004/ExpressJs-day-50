@@ -1,0 +1,14 @@
+const db = require("@/database/database");
+
+const isRevoked = async (token) => {
+  await db.execute("DELETE FROM revoked_tokens WHERE expires_at < NOW()");
+
+  const [rows] = await db.query(
+    "SELECT count(*) as count FROM revoked_tokens WHERE token = ?",
+    [token],
+  );
+  if (rows.length === 0) return false;
+  return rows[0]["count"];
+};
+
+module.exports = { isRevoked };

@@ -68,7 +68,10 @@ async function addParticipants(req, res) {
 
   await model.addParticipants(conversationId, participant_ids);
 
-  return res.success(200, "Add participants successfully");
+  return res.success(201, {
+    user_ids: participant_ids,
+    joined_at: new Date(),
+  });
 }
 
 async function sendMessages(req, res) {
@@ -76,29 +79,38 @@ async function sendMessages(req, res) {
   const { content } = req.body;
   const senderId = req.currentUser.id;
 
-  await model.sendMessages(conversationId, content, senderId);
+  // Kiểm tra content không rỗng
+  if (!content || typeof content !== "string" || content.trim() === "") {
+    return res.error(400, "Message content cannot be empty");
+  }
 
-  return res.success(200, "Send message successfully");
+  const [messages] = await model.sendMessages(
+    conversationId,
+    content,
+    senderId,
+  );
+
+  return res.success(201, messages);
 }
 
 async function getMessages(req, res) {
   const conversationId = req.params.id;
   const messages = await model.getMessages(conversationId);
 
-  if (!messages) {
-    return res.error(404, "Messages not found");
+  if (!messages || messages.length === 0) {
+    return res.success(200, []);
   }
 
   const response = messages.map((message) => {
     return {
       conversation_id: message.conversation_id,
       sender_id: message.sender_id,
-      content: message.content,
-      created_at: message.created_at,
       user: {
         id: message.user_id,
         email: message.email,
       },
+      content: message.content,
+      created_at: message.created_at,
     };
   });
 

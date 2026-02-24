@@ -14,10 +14,7 @@ const register = async (email, password) => {
     insertId,
   ]);
 
-  return {
-    id: users[0].id,
-    email: users[0].email,
-  };
+  return users;
 };
 
 const login = async (email) => {
@@ -30,9 +27,54 @@ const login = async (email) => {
 };
 
 const getUserById = async (id) => {
-  const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [id]);
+  const [rows] = await db.query("SELECT id, email FROM users WHERE id = ?", [
+    id,
+  ]);
   if (rows.length === 0) return null;
   return rows[0];
 };
 
-module.exports = { login, register, getUserById };
+const logout = async (token, expiresAt) => {
+  const result = await db.execute(
+    "INSERT INTO revoked_tokens (token, expires_at) VALUES (?, ?)",
+    [token, expiresAt],
+  );
+
+  return result;
+};
+
+const createRefreshToken = async (userId, token, expiresAt) => {
+  const [rows] = await db.query(
+    "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
+    [userId, token, expiresAt],
+  );
+
+  return rows;
+};
+
+const getRefreshToken = async (token) => {
+  const [rows] = await db.query(
+    "SELECT id, user_id FROM refresh_tokens WHERE token = ? AND expires_at >= NOW()",
+    [token],
+  );
+
+  return rows;
+};
+
+const deleteRefreshToken = async (id) => {
+  const [rows] = await db.query("DELETE FROM refresh_tokens WHERE id = ?", [
+    id,
+  ]);
+
+  return rows;
+};
+
+module.exports = {
+  login,
+  register,
+  getUserById,
+  logout,
+  createRefreshToken,
+  getRefreshToken,
+  deleteRefreshToken,
+};

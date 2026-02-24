@@ -10,11 +10,10 @@ async function searchUserByEmail(req, res) {
     return res.error(400, "You can not search yourself");
 
   const users = await model.searchUserByEmail(currentUserEmail, q);
-  const user = users[0];
 
-  if (!user) return res.error(404, "Users not found");
+  if (!users || users.length === 0) return res.success(200, []);
 
-  return res.success(200, user);
+  return res.success(200, users);
 }
 
 module.exports = { searchUserByEmail };
