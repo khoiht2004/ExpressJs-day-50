@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const model = require("@/models/auth.model");
-const AuthService = require("@/services/AuthService");
+const AuthService = require("@/services/auth.service");
 
 async function register(req, res) {
   const { email, password } = req.body;
@@ -26,7 +26,7 @@ async function register(req, res) {
   const users = await model.register(email, hashedPassword);
 
   const user = users[0];
-  if (!user) res.error(409, "Email already exists");
+  if (!user) return res.error(409, "Email already exists");
 
   const { accessToken, timeExp } = await AuthService.signAccessToken(user);
 
@@ -40,10 +40,11 @@ async function register(req, res) {
 
 async function login(req, res) {
   const { email, password } = req.body;
-  if (!email || !password) res.error(400, "Email and password are required");
+  if (!email || !password)
+    return res.error(400, "Email and password are required");
 
   const user = await model.login(email);
-  if (!user) res.error(401, "User not found");
+  if (!user) return res.error(401, "User not found");
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (isMatch) {
