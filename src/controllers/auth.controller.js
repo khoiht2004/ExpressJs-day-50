@@ -47,7 +47,7 @@ async function login(req, res) {
     return res.error(400, "Email and password are required");
 
   const user = await model.login(email);
-  if (!user) return res.error(401, "User not found");
+  if (!user) return res.error(401, "Email or password is invalid");
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (isMatch) {
