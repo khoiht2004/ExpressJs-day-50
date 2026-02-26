@@ -4,6 +4,7 @@ const base64 = require("@/utils/base64");
 const crypto = require("node:crypto");
 const generateKey = require("@/utils/generateKey");
 const model = require("@/models/auth.model");
+const db = require("@/database/database");
 
 /**
  * JWT bảo mật và chống giả mạo nhờ phần Signature (chữ ký).
@@ -49,7 +50,7 @@ const jwt2 = {
 };
 
 class AuthService {
-  async signAccessToken(user) {
+  async signAccessToken(user) {``
     const timeExp = Math.floor(Date.now() / 1000) + 60 * 60; // Token hết hạn sau 1h
     const accessToken = await jwt.sign(
       {
@@ -73,6 +74,25 @@ class AuthService {
     const timeExp = new Date(Date.now() + 60 * 60 * 24 * 7); // Token hết hạn sau 7 ngày
     await model.createRefreshToken(user.id, refreshToken, timeExp);
     return refreshToken;
+  }
+
+  async verifyEmail(token) {
+    const payload = await jwt.verify(token, auth.verifyJwtSecret);
+
+    if (payload.exp < Date.now() / 1000) return [true, null];
+
+    const userId = payload.sub;
+
+    const query =
+      "SELECT COUNT(*) AS count FROM users WHERE id = ? AND email_verified_at IS NOT NULL";
+    const [[{ count }]] = await db.query(query, [userId]);
+
+    if (count > 0) return [true, null];
+
+    await db.query("UPDATE users SET email_verified_at = now() WHERE id = ?", [
+      userId,
+    ]);
+    return [false, null];
   }
 }
 

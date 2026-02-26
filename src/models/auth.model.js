@@ -7,19 +7,19 @@ const register = async (email, password) => {
   if (rows.length > 0) return null;
 
   const [{ insertId }] = await db.execute(
-    "INSERT INTO users (email, password) VALUES (?, ?)",
+    "INSERT INTO users (email, password, created_at) VALUES (?, ?, NOW())",
     [email, password],
   );
   const [users] = await db.query("SELECT id, email FROM users WHERE id = ?", [
     insertId,
   ]);
 
-  return users;
+  return users[0];
 };
 
 const login = async (email) => {
   const [rows] = await db.query(
-    "SELECT id, email, password FROM users WHERE email = ?",
+    "SELECT id, email, password, email_verified_at FROM users WHERE email = ?",
     [email],
   );
   if (rows.length === 0) return null;

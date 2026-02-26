@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const model = require("@/models/auth.model");
 const AuthService = require("@/services/auth.service");
+const MailService = require("@/services/mail.service");
 
 async function register(req, res) {
   const { email, password } = req.body;
@@ -23,10 +24,12 @@ async function register(req, res) {
   }
 
   const hashedPassword = await bcrypt.hash(password, saltRounds);
-  const users = await model.register(email, hashedPassword);
+  const user = await model.register(email, hashedPassword);
 
-  const user = users[0];
   if (!user) return res.error(409, "Email already exists");
+
+  // Send verification email
+  await MailService.sendVerificationEmail(user);
 
   const { accessToken, timeExp } = await AuthService.signAccessToken(user);
 
@@ -48,6 +51,10 @@ async function login(req, res) {
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (isMatch) {
+    if (!user.email_verified_at) {
+      return res.error(403, "Account not verified");
+    }
+
     const { accessToken, timeExp } = await AuthService.signAccessToken(user);
     const refreshToken = await AuthService.createRefreshToken(user);
 
@@ -97,4 +104,15 @@ async function refreshToken(req, res) {
   });
 }
 
-module.exports = { register, login, getMe, logout, refreshToken };
+async function verifyEmail(req, res) {
+  const { token } = req.body;
+  if (!token) res.error(400, "Token is required");
+
+  const [error, data] = await AuthService.verifyEmail(token);
+
+  if (error) return res.error(403, "Invalid token");
+
+  res.success(200, "Email verified successfully");
+}
+
+module.exports = { register, login, getMe, logout, refreshToken, verifyEmail };
