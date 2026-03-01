@@ -123,27 +123,16 @@ async function changePassword(req, res) {
   const { old_password, new_password, confirm_password } = req.body;
   const { user } = req.auth;
 
-  if (!old_password || !new_password || !confirm_password)
-    return res.error(400, "All fields are required");
-
-  const hashedPasswordDB = await model.getUserPasswordById(user.id);
-  const isMatch = await bcrypt.compare(old_password, hashedPasswordDB);
-  if (!isMatch) return res.error(401, "Invalid old password");
-
-  if (new_password !== confirm_password)
-    return res.error(400, "Passwords do not match");
-
-  const hashedPassword = await bcrypt.hash(new_password, 10);
-  await model.changePassword(user.id, hashedPassword);
-
-  // Send password change email
-  await queueService.push(
-    "sendPasswordChangeEmail",
-    { id: user.id, email: user.email },
-    1,
+  const [error, data] = await AuthService.changePassword(
+    user,
+    old_password,
+    new_password,
+    confirm_password,
   );
 
-  return res.success(200, "Password changed successfully");
+  if (error) return res.error(400, error);
+
+  return res.success(200, data);
 }
 
 module.exports = {

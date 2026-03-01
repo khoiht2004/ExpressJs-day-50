@@ -5,6 +5,8 @@ const crypto = require("node:crypto");
 const generateKey = require("@/utils/generateKey");
 const model = require("@/models/auth.model");
 const db = require("@/database/database");
+const bcrypt = require("bcrypt");
+const queueService = require("@/services/queue.service");
 
 /**
  * JWT bảo mật và chống giả mạo nhờ phần Signature (chữ ký).
@@ -93,6 +95,38 @@ class AuthService {
       userId,
     ]);
     return [false, null];
+  }
+
+  async changePassword(user, old_password, new_password, confirm_password) {
+    if (!old_password || !new_password || !confirm_password) {
+      return ["All fields are required", null];
+    }
+
+    const hashedPasswordDB = await model.getUserPasswordById(user.id);
+    const isMatch = await bcrypt.compare(old_password, hashedPasswordDB);
+    if (!isMatch) {
+      return ["Invalid old password", null];
+    }
+
+    if (new_password === old_password) {
+      return ["New password must be different from old password", null];
+    }
+
+    if (new_password !== confirm_password) {
+      return ["Passwords do not match", null];
+    }
+
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+    await model.changePassword(user.id, hashedPassword);
+
+    // Send password change email
+    await queueService.push(
+      "sendPasswordChangeEmail",
+      { id: user.id, email: user.email },
+      1,
+    );
+
+    return [null, "Password changed successfully"];
   }
 }
 
