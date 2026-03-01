@@ -34,6 +34,14 @@ const getUserById = async (id) => {
   return rows[0];
 };
 
+const getUserPasswordById = async (id) => {
+  const [rows] = await db.query("SELECT password FROM users WHERE id = ?", [
+    id,
+  ]);
+  if (rows.length === 0) return null;
+  return rows[0].password;
+};
+
 const logout = async (token, expiresAt) => {
   const result = await db.execute(
     "INSERT INTO revoked_tokens (token, expires_at) VALUES (?, ?)",
@@ -69,6 +77,15 @@ const deleteRefreshToken = async (id) => {
   return rows;
 };
 
+const changePassword = async (id, password) => {
+  const [rows] = await db.execute(
+    "UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?",
+    [password, id],
+  );
+
+  return rows;
+};
+
 module.exports = {
   login,
   register,
@@ -77,4 +94,6 @@ module.exports = {
   createRefreshToken,
   getRefreshToken,
   deleteRefreshToken,
+  changePassword,
+  getUserPasswordById,
 };

@@ -1,17 +1,17 @@
 const db = require("@/database/database");
 
 class QueueService {
-  async push(type, payload) {
+  async push(type, payload, isPriority = 0) {
     const jsonPayload = JSON.stringify(payload);
-    await db.query("INSERT INTO queues (type, payload) VALUES (?, ?)", [
-      type,
-      jsonPayload,
-    ]);
+    await db.query(
+      "INSERT INTO queues (type, payload, is_priority) VALUES (?, ?, ?)",
+      [type, jsonPayload, isPriority],
+    );
   }
 
   async getPendingJobs() {
     const [rows] = await db.query(
-      "SELECT * FROM queues WHERE status = 'pending' ORDER BY id ASC LIMIT 1",
+      "SELECT * FROM queues WHERE status = 'pending' ORDER BY is_priority DESC, id ASC LIMIT 1",
     );
     const firstJob = rows[0];
     return firstJob ?? null;

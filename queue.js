@@ -14,7 +14,7 @@ const sleep = require("@/utils/sleep");
         const payload = JSON.parse(jsonPayload);
 
         queueService.updateStatus(id, "in_progress");
-        const handle = jobs[type];
+        const handle = tasks[type];
         if (handle) {
           await handle(payload);
         } else {

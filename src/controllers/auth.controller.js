@@ -30,7 +30,10 @@ async function register(req, res) {
   if (!user) return res.error(409, "Email already exists");
 
   // Send verification email
-  await queueService.push("sendVerificationEmail", user);
+  await queueService.push("sendVerificationEmail", {
+    id: user.id,
+    email: user.email,
+  });
 
   const { accessToken, timeExp } = await AuthService.signAccessToken(user);
 
@@ -116,4 +119,39 @@ async function verifyEmail(req, res) {
   res.success(200, "Email verified successfully");
 }
 
-module.exports = { register, login, getMe, logout, refreshToken, verifyEmail };
+async function changePassword(req, res) {
+  const { old_password, new_password, confirm_password } = req.body;
+  const user = req.currentUser;
+
+  if (!old_password || !new_password || !confirm_password)
+    return res.error(400, "All fields are required");
+
+  const hashedPasswordDB = await model.getUserPasswordById(user.id);
+  const isMatch = await bcrypt.compare(old_password, hashedPasswordDB);
+  if (!isMatch) return res.error(401, "Invalid old password");
+
+  if (new_password !== confirm_password)
+    return res.error(400, "Passwords do not match");
+
+  const hashedPassword = await bcrypt.hash(new_password, 10);
+  await model.changePassword(user.id, hashedPassword);
+
+  // Send password change email
+  await queueService.push(
+    "sendPasswordChangeEmail",
+    { id: user.id, email: user.email },
+    1,
+  );
+
+  return res.success(200, "Password changed successfully");
+}
+
+module.exports = {
+  register,
+  login,
+  getMe,
+  logout,
+  refreshToken,
+  verifyEmail,
+  changePassword,
+};

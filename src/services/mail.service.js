@@ -48,6 +48,24 @@ class MailService {
       },
     });
   }
+
+  async sendPasswordChangeEmail(user) {
+    const { email } = user;
+    const { fromAddress } = mailConfig;
+    const changedAt = new Date().toLocaleString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+
+    return await this.send({
+      from: `Demo send Email <${fromAddress}>`,
+      to: email,
+      subject: "Password changed successfully",
+      template: "auth/changePasswordEmail",
+      templateData: {
+        changedAt,
+      },
+    });
+  }
 }
 
 module.exports = new MailService();
