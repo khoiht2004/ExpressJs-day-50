@@ -1,6 +1,8 @@
 const bcrypt = require("bcrypt");
 const model = require("@/models/auth.model");
 const AuthService = require("@/services/auth.service");
+const MailService = require("@/services/mail.service");
+const queueService = require("@/services/queue.service");
 
 async function register(req, res) {
   const { email, password } = req.body;
@@ -23,10 +25,15 @@ async function register(req, res) {
   }
 
   const hashedPassword = await bcrypt.hash(password, saltRounds);
-  const users = await model.register(email, hashedPassword);
+  const user = await model.register(email, hashedPassword);
 
-  const user = users[0];
   if (!user) return res.error(409, "Email already exists");
+
+  // Send verification email
+  await queueService.push("sendVerificationEmail", {
+    id: user.id,
+    email: user.email,
+  });
 
   const { accessToken, timeExp } = await AuthService.signAccessToken(user);
 
@@ -44,10 +51,14 @@ async function login(req, res) {
     return res.error(400, "Email and password are required");
 
   const user = await model.login(email);
-  if (!user) return res.error(401, "User not found");
+  if (!user) return res.error(401, "Email or password is invalid");
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (isMatch) {
+    if (!user.email_verified_at) {
+      return res.error(403, "Account not verified");
+    }
+
     const { accessToken, timeExp } = await AuthService.signAccessToken(user);
     const refreshToken = await AuthService.createRefreshToken(user);
 
@@ -64,14 +75,14 @@ async function login(req, res) {
 }
 
 async function getMe(req, res) {
-  const user = req.currentUser;
+  const { user } = req.auth;
 
   return res.success(200, user);
 }
 
 async function logout(req, res) {
-  const { accessToken, tokenPayload } = req;
-  const expiresAt = new Date(tokenPayload.exp * 1000);
+  const { accessToken, payload } = req.auth;
+  const expiresAt = new Date(payload.exp * 1000);
 
   await model.logout(accessToken, expiresAt);
   res.success(204, null);
@@ -97,4 +108,39 @@ async function refreshToken(req, res) {
   });
 }
 
-module.exports = { register, login, getMe, logout, refreshToken };
+async function verifyEmail(req, res) {
+  const { token } = req.body;
+  if (!token) res.error(400, "Token is required");
+
+  const [error, data] = await AuthService.verifyEmail(token);
+
+  if (error) return res.error(403, "Invalid token");
+
+  res.success(200, "Email verified successfully");
+}
+
+async function changePassword(req, res) {
+  const { old_password, new_password, confirm_password } = req.body;
+  const { user } = req.auth;
+
+  const [error, data] = await AuthService.changePassword(
+    user,
+    old_password,
+    new_password,
+    confirm_password,
+  );
+
+  if (error) return res.error(400, error);
+
+  return res.success(200, data);
+}
+
+module.exports = {
+  register,
+  login,
+  getMe,
+  logout,
+  refreshToken,
+  verifyEmail,
+  changePassword,
+};

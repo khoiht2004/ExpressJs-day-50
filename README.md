@@ -49,6 +49,25 @@
 - **Response:**
   - `200 OK`: User information
 
+### Change Password
+
+**POST** `/api/auth/change-password`
+
+- **Headers:**
+  - `Authorization`: `Bearer your_access_token`
+- **Body:**
+  ```json
+  {
+    "old_password": "your_old_password",
+    "new_password": "your_new_password",
+    "confirm_password": "your_new_password"
+  }
+  ```
+- **Response:**
+  - `200 OK`: "Password changed successfully"
+  - `400 Bad Request`: Validation error or password mismatch
+  - `401 Unauthorized`: Invalid old password
+
 ---
 
 ## Conversations

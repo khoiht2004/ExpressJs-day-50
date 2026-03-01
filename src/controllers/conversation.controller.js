@@ -2,7 +2,7 @@ const model = require("@/models/conversation.model");
 
 async function create(req, res) {
   const { name, type, participant_ids } = req.body;
-  const created_by = req.currentUser.id;
+  const created_by = req.auth.user.id;
 
   // Validate
   if (!type || !["group", "direct"].includes(type)) {
@@ -48,7 +48,7 @@ async function create(req, res) {
 }
 
 async function getAll(req, res) {
-  const userId = req.currentUser.id;
+  const userId = req.auth.user.id;
   const conversations = await model.getAll(userId);
 
   if (!conversations) {
@@ -77,7 +77,7 @@ async function addParticipants(req, res) {
 async function sendMessages(req, res) {
   const conversationId = req.params.id;
   const { content } = req.body;
-  const senderId = req.currentUser.id;
+  const senderId = req.auth.user.id;
 
   // Kiểm tra content không rỗng
   if (!content || typeof content !== "string" || content.trim() === "") {

@@ -2,7 +2,7 @@ const model = require("@/models/user.model");
 
 async function searchUserByEmail(req, res) {
   const { q } = req.query;
-  const currentUserEmail = req.currentUser.email;
+  const currentUserEmail = req.auth.user.email;
 
   if (!currentUserEmail) return res.error(401, "Unauthorized");
 
