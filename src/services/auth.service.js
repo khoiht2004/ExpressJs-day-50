@@ -50,7 +50,7 @@ const jwt2 = {
 };
 
 class AuthService {
-  async signAccessToken(user) {``
+  async signAccessToken(user) {
     const timeExp = Math.floor(Date.now() / 1000) + 60 * 60; // Token hết hạn sau 1h
     const accessToken = await jwt.sign(
       {

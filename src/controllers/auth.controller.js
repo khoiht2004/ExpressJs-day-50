@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const model = require("@/models/auth.model");
 const AuthService = require("@/services/auth.service");
 const MailService = require("@/services/mail.service");
+const queueService = require("@/services/queue.service");
 
 async function register(req, res) {
   const { email, password } = req.body;
@@ -29,7 +30,7 @@ async function register(req, res) {
   if (!user) return res.error(409, "Email already exists");
 
   // Send verification email
-  await MailService.sendVerificationEmail(user);
+  await queueService.push("sendVerificationEmail", user);
 
   const { accessToken, timeExp } = await AuthService.signAccessToken(user);
 
