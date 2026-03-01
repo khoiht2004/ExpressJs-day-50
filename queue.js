@@ -2,7 +2,7 @@ require("dotenv").config();
 require("module-alias/register");
 
 const queueService = require("@/services/queue.service");
-const jobs = require("@/jobs");
+const tasks = require("@/tasks");
 const sleep = require("@/utils/sleep");
 
 (async () => {
