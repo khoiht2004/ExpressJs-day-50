@@ -14,9 +14,11 @@ async function authRequired(req, res, next) {
   const user = await authModel.getUserById(payload.sub);
   if (!user) return res.error(401, "User not found");
 
-  req.currentUser = user;
-  req.accessToken = accessToken;
-  req.tokenPayload = payload;
+  req.auth = {
+    user,
+    accessToken,
+    payload,
+  };
 
   next();
 }

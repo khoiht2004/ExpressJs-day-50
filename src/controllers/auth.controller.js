@@ -75,14 +75,14 @@ async function login(req, res) {
 }
 
 async function getMe(req, res) {
-  const user = req.currentUser;
+  const { user } = req.auth;
 
   return res.success(200, user);
 }
 
 async function logout(req, res) {
-  const { accessToken, tokenPayload } = req;
-  const expiresAt = new Date(tokenPayload.exp * 1000);
+  const { accessToken, payload } = req.auth;
+  const expiresAt = new Date(payload.exp * 1000);
 
   await model.logout(accessToken, expiresAt);
   res.success(204, null);
@@ -121,7 +121,7 @@ async function verifyEmail(req, res) {
 
 async function changePassword(req, res) {
   const { old_password, new_password, confirm_password } = req.body;
-  const user = req.currentUser;
+  const { user } = req.auth;
 
   if (!old_password || !new_password || !confirm_password)
     return res.error(400, "All fields are required");
