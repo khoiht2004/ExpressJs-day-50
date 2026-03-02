@@ -15,15 +15,21 @@ const sleep = require("@/utils/sleep");
 
         queueService.updateStatus(id, "in_progress");
         const handle = tasks[type];
+        // log
+        console.log(`Job ${type} is processing`);
         if (handle) {
           await handle(payload);
         } else {
-          console.log("Job invalid");
+          console.log(`Job ${type} is invalid`);
         }
 
         queueService.updateStatus(id, "completed");
+        // log
+        console.log(`Job ${type} is completed at ${new Date().toISOString()}`);
       } catch (error) {
         queueService.updateStatus(id, "failed");
+        // log
+        console.log(`Job ${type} is failed at ${new Date().toISOString()}`);
         console.log(error);
       }
     }
