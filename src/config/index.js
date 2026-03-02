@@ -18,7 +18,7 @@ const fileNames = fs
 const configs = fileNames.reduce((obj, fileName) => {
   return {
     ...obj,
-    [fileName.replace(postfix, "")]: require(`./${fileName}`),
+    [fileName.replace(postfix, "Config")]: require(`./${fileName}`),
   };
 }, {});
 

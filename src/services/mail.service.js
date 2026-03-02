@@ -66,6 +66,24 @@ class MailService {
       },
     });
   }
+
+  async sendBackupDatabaseEmail(user) {
+    const { email } = user;
+    const { fromAddress } = mailConfig;
+    const backupTime = new Date().toLocaleString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+
+    return await this.send({
+      from: `Demo send Email <${fromAddress}>`,
+      to: email,
+      subject: "Backup database successfully",
+      template: "toast/backupDatabaseEmail",
+      templateData: {
+        backupTime,
+      },
+    });
+  }
 }
 
 module.exports = new MailService();
