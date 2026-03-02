@@ -100,8 +100,6 @@ async function refreshToken(req, res) {
   const { accessToken } = await AuthService.signAccessToken(user);
   const refreshToken = await AuthService.createRefreshToken(user);
 
-  await model.deleteRefreshToken(refreshTokenDB[0].id);
-
   return res.success(200, {
     access_token: accessToken,
     refresh_token: refreshToken,

@@ -12,7 +12,6 @@ const sleep = require("@/utils/sleep");
       const { id, type, payload: jsonPayload } = pendingJobs;
       try {
         const payload = JSON.parse(jsonPayload);
-
         queueService.updateStatus(id, "in_progress");
         const handle = tasks[type];
         // log
@@ -27,10 +26,13 @@ const sleep = require("@/utils/sleep");
         // log
         console.log(`Job ${type} is completed at ${new Date().toISOString()}`);
       } catch (error) {
-        queueService.updateStatus(id, "failed");
         // log
         console.log(`Job ${type} is failed at ${new Date().toISOString()}`);
-        console.log(error);
+        const info = JSON.stringify({
+          message: String(error),
+        });
+
+        queueService.updateStatus(id, "failed", info);
       }
     }
     await sleep(3000);
