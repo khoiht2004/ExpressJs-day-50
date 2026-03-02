@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { auth } = require("@/config");
+const { authConfig } = require("@/config");
 const base64 = require("@/utils/base64");
 const crypto = require("node:crypto");
 const generateKey = require("@/utils/generateKey");

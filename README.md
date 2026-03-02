@@ -1,171 +1,61 @@
-# API Documentation
+## 🚀 Hướng dẫn khởi chạy
 
-## Auth
+Dự án sử dụng cơ chế chạy đa luồng để đảm bảo hiệu năng. Bạn có thể chọn các cách sau:
 
-### Register
+### Cách 1: Chạy tất cả dịch vụ cùng lúc (Khuyên dùng)
 
-**POST** `/api/auth/register`
+Để chạy đồng thời Server, Queue và Schedule chỉ trong một Terminal duy nhất:
 
-- **Body:**
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "your_password"
-  }
-  ```
-- **Response:**
-  - `201 Created`: User information
-  - `409 Conflict`: Email already exists
+```bash
+npm run dev
+```
 
-### Login
+_Lưu ý: Bạn cần cài đặt `concurrently` (đã có sẵn trong devDependencies)._
 
-**POST** `/api/auth/login`
+### Cách 2: Chạy từng dịch vụ riêng biệt
 
-- **Body:**
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "your_password"
-  }
-  ```
-- **Response:**
-  - `200 OK`:
-    ```json
-    {
-      "id": 1,
-      "email": "user@example.com",
-      "access_token": "your_jwt_token",
-      "expired_at": 1700000000
-    }
+Nếu bạn muốn theo dõi log chi tiết của từng phần, hãy mở các Terminal riêng:
+
+1.  **Main API Server**:
+    ```bash
+    npm run server
     ```
-  - `401 Unauthorized`: Invalid email or password
-
-### Get Me
-
-**GET** `/api/auth/me`
-
-- **Headers:**
-  - `Authorization`: `Bearer your_access_token`
-- **Response:**
-  - `200 OK`: User information
-
-### Change Password
-
-**POST** `/api/auth/change-password`
-
-- **Headers:**
-  - `Authorization`: `Bearer your_access_token`
-- **Body:**
-  ```json
-  {
-    "old_password": "your_old_password",
-    "new_password": "your_new_password",
-    "confirm_password": "your_new_password"
-  }
-  ```
-- **Response:**
-  - `200 OK`: "Password changed successfully"
-  - `400 Bad Request`: Validation error or password mismatch
-  - `401 Unauthorized`: Invalid old password
+2.  **Background Worker (Queue)**:
+    ```bash
+    npm run queue
+    ```
+3.  **Scheduled Tasks (Schedules)**:
+    ```bash
+    npm run schedule
+    ```
 
 ---
 
-## Conversations
+## 🏗️ Cấu trúc hệ thống chính
 
-_Note: All conversation APIs require Authorization header._
-
-### Create Conversation
-
-**POST** `/api/conversations`
-
-- **Headers:**
-  - `Authorization`: `Bearer your_access_token`
-- **Body (Group):**
-  ```json
-  {
-    "name": "Group Name",
-    "type": "group",
-    "participant_ids": [2, 3] // Array of other user IDs (excluding yourself)
-  }
-  ```
-- **Body (Direct):**
-  ```json
-  {
-    "type": "direct",
-    "participant_ids": [2] // Array with exactly ONE other user ID
-  }
-  ```
-- **Response:**
-  - `201 Created`: Created conversation object
-
-### Get All Conversations
-
-**GET** `/api/conversations`
-
-- **Headers:**
-  - `Authorization`: `Bearer your_access_token`
-- **Response:**
-  - `200 OK`: List of conversations created by current user
-
-### Add Participants
-
-**POST** `/api/conversations/:id/participants`
-
-- **Headers:**
-  - `Authorization`: `Bearer your_access_token`
-- **Params:**
-  - `id`: Conversation ID
-- **Body:**
-  ```json
-  {
-    "participant_ids": [4, 5] // Array of user IDs to add
-  }
-  ```
-- **Response:**
-  - `200 OK`: "Add participants successfully"
-  - `400 Bad Request`: Invalid input or conversation is not a group
-
-### Send Message
-
-**POST** `/api/conversations/:id/messages`
-
-- **Headers:**
-  - `Authorization`: `Bearer your_access_token`
-- **Params:**
-  - `id`: Conversation ID
-- **Body:**
-  ```json
-  {
-    "content": "Hello world!"
-  }
-  ```
-- **Response:**
-  - `200 OK`: "Send message successfully"
-
-### Get Messages
-
-**GET** `/api/conversations/:id/messages`
-
-- **Headers:**
-  - `Authorization`: `Bearer your_access_token`
-- **Params:**
-  - `id`: Conversation ID
-- **Response:**
-  - `200 OK`: List of messages in the conversation, including sender details.
+1.  **`server.js`**: Điểm khởi đầu của ứng dụng Express API. Nơi tiếp nhận và phản hồi các request từ phía người dùng.
+2.  **`queue.js`**: Worker chạy ngầm. Nó liên tục kiểm tra database để lấy các "Jobs" đang chờ xử lý (như gửi email xác thực, email đổi mật khẩu).
+3.  **`schedule.js`**: Chạy các tác vụ theo lịch trình định sẵn (Cron Job). Ví dụ:
+    - **3:00 AM**: Backup Database và đẩy lên Google Drive.
+    - **1:00 AM**: Dọn dẹp các mã Token đã hết hạn trong database.
 
 ---
 
-## Users
+## 🛠️ Cài đặt môi trường
 
-### Search User
+1.  **Cài đặt dependencies**:
+    ```bash
+    npm install
+    ```
+2.  **Cấu hình file `.env`**: Tạo file `.env` từ `.env.example` và điền đầy đủ:
+    - Thông tin kết nối Database (MySQL).
+    - Thông tin cấu hình Mail (SMTP).
+    - Cấu hình Google Drive API (cho chức năng Backup).
+    - Cấu hình thư mục Backup của Rclone (nếu sử dụng).
 
-**GET** `/api/users/search?q=email@example.com`
+---
 
-- **Headers:**
-  - `Authorization`: `Bearer your_access_token`
-- **Query Params:**
-  - `q`: User's email to search for (must be exact match)
-- **Response:**
-  - `200 OK`: User information object
-  - `404 Not Found`: "Users not found"
-  - `400 Bad Request`: "You can not search yourself"
+## Các tính năng
+
+- **Priority Queue**: Hàng đợi có phân cấp ưu tiên (xử lý việc quan trọng trước).
+- **Auto Backup**: Tự động sao lưu dữ liệu mỗi ngày lên Google Drive.

@@ -69,14 +69,6 @@ const getRefreshToken = async (token) => {
   return rows;
 };
 
-const deleteRefreshToken = async (id) => {
-  const [rows] = await db.query("DELETE FROM refresh_tokens WHERE id = ?", [
-    id,
-  ]);
-
-  return rows;
-};
-
 const changePassword = async (id, password) => {
   const [rows] = await db.execute(
     "UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?",
@@ -93,7 +85,6 @@ module.exports = {
   logout,
   createRefreshToken,
   getRefreshToken,
-  deleteRefreshToken,
   changePassword,
   getUserPasswordById,
 };

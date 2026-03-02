@@ -17,10 +17,10 @@ class QueueService {
     return firstJob ?? null;
   }
 
-  async updateStatus(id, status) {
+  async updateStatus(id, status, info = null) {
     await db.query(
-      "UPDATE queues SET status = ?, updated_at = NOW() WHERE id = ?",
-      [status, id],
+      "UPDATE queues SET status = ?, updated_at = NOW(), info = ? WHERE id = ?",
+      [status, info, id],
     );
   }
 }
