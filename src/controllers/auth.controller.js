@@ -34,13 +34,12 @@ async function register(req, res) {
     email: user.email,
   });
 
-  const { accessToken, timeExp } = await AuthService.signAccessToken(user);
+  await AuthService.signAccessToken(user);
 
   return res.success(201, {
+    message: "Register successfully",
     id: user.id,
     email: user.email,
-    access_token: accessToken,
-    expired_at: timeExp,
   });
 }
 

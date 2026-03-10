@@ -59,7 +59,7 @@ class AuthService {
         sub: user.id,
         exp: timeExp,
       },
-      auth.jwtSecret,
+      authConfig.jwtSecret,
     );
     return {
       accessToken,
@@ -68,7 +68,7 @@ class AuthService {
   }
 
   async verifyAccessToken(accessToken) {
-    return await jwt.verify(accessToken, auth.jwtSecret);
+    return await jwt.verify(accessToken, authConfig.jwtSecret);
   }
 
   async createRefreshToken(user) {
@@ -79,7 +79,7 @@ class AuthService {
   }
 
   async verifyEmail(token) {
-    const payload = await jwt.verify(token, auth.verifyJwtSecret);
+    const payload = await jwt.verify(token, authConfig.verifyJwtSecret);
 
     if (payload.exp < Date.now() / 1000) return [true, null];
 
