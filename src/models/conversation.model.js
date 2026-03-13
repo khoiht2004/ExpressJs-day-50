@@ -1,130 +1,180 @@
-const db = require("@/database/database");
+const prisma = require("@/utils/prisma");
 
 async function create(created_by, name, type, participant_ids) {
-  const [result] = await db.query(
-    "INSERT INTO conversations (created_by, name, type) VALUES (?, ?, ?)",
-    [created_by, name, type],
-  );
+  const conversation = await prisma.conversations.create({
+    data: {
+      created_by: created_by ? created_by.toString() : null,
+      name,
+      type,
+      participants:
+        participant_ids && participant_ids.length > 0
+          ? {
+              create: participant_ids.map((userId) => ({
+                user_id: parseInt(userId),
+              })),
+            }
+          : undefined,
+    },
+  });
 
-  const conversationId = result.insertId;
-  if (participant_ids && participant_ids.length > 0) {
-    const values = participant_ids.map((userId) => [conversationId, userId]);
-
-    await db.query(
-      "INSERT INTO conversation_participants (conversation_id, user_id) VALUES ?",
-      [values],
-    );
-  }
-
-  const [conversations] = await db.query(
-    "SELECT * FROM conversations WHERE id = ?",
-    [conversationId],
-  );
-
-  return conversations[0];
+  return conversation;
 }
 
 async function getAll(userId) {
-  const [conversations] = await db.query(
-    `SELECT DISTINCT
-  c.id,
-  c.name,
-  c.type,
-  c.created_by,
-  c.created_at
-FROM
-  conversations c
-JOIN conversation_participants cp ON c.id = cp.conversation_id
-WHERE
-  cp.user_id = ?
-ORDER BY
-  c.created_at DESC`,
-    [userId],
-  );
+  const conversations = await prisma.conversations.findMany({
+    where: {
+      participants: {
+        some: {
+          user_id: parseInt(userId),
+        },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      created_by: true,
+      created_at: true,
+    },
+    orderBy: {
+      created_at: "desc",
+    },
+  });
+
   return conversations;
 }
 
 async function addParticipants(conversationId, participant_ids) {
-  const [conversations] = await db.query(
-    "SELECT type FROM conversations WHERE id = ?",
-    [conversationId],
-  );
+  conversationId = parseInt(conversationId);
 
-  if (conversations[0].type !== "group") {
+  const conversation = await prisma.conversations.findUnique({
+    where: { id: conversationId },
+    select: { type: true },
+  });
+
+  if (!conversation) {
+    throw new Error("Conversation not found");
+  }
+
+  if (conversation.type !== "group") {
     throw new Error("Conversation is not a group");
   }
 
   // Kiểm tra mỗi user tồn tại
   for (const userId of participant_ids) {
-    const [users] = await db.query("SELECT id FROM users WHERE id = ?", [
-      userId,
-    ]);
-    if (!users.length) throw new Error(`User with id ${userId} not found`);
+    const user = await prisma.users.findUnique({
+      where: { id: parseInt(userId) },
+      select: { id: true },
+    });
+    if (!user) throw new Error(`User with id ${userId} not found`);
+
+    const existing = await prisma.conversation_participants.findUnique({
+      where: {
+        user_id_conversation_id: {
+          conversation_id: conversationId,
+          user_id: parseInt(userId),
+        },
+      },
+    });
+
+    if (existing) {
+      throw new Error(`User with id ${userId} already in conversation`);
+    }
   }
 
-  // Kiểm tra user đã tham gia chưa
-  const [existing] = await db.query(
-    "SELECT id FROM conversation_participants WHERE conversation_id = ? AND user_id = ?",
-    [conversationId, userId],
-  );
-
-  if (existing.length)
-    throw new Error(`User with id ${userId} already in conversation`);
-
   // Thêm user vào danh sách tham gia
-  const values = participant_ids.map((userId) => [conversationId, userId]);
+  const result = await prisma.conversation_participants.createMany({
+    data: participant_ids.map((userId) => ({
+      conversation_id: conversationId,
+      user_id: parseInt(userId),
+    })),
+  });
 
-  return await db.query(
-    "INSERT INTO conversation_participants (conversation_id, user_id) VALUES ?",
-    [values],
-  );
+  return result;
 }
 
 async function sendMessages(conversationId, content, senderId) {
-  // Kiểm tra user là thành viên của conversation
-  const [participants] = await db.query(
-    "SELECT user_id FROM conversation_participants WHERE conversation_id = ? AND user_id = ?",
-    [conversationId, senderId],
-  );
+  conversationId = parseInt(conversationId);
+  senderId = parseInt(senderId);
 
-  if (!participants.length) {
+  // Kiểm tra user là thành viên của conversation
+  const participant = await prisma.conversation_participants.findUnique({
+    where: {
+      user_id_conversation_id: {
+        conversation_id: conversationId,
+        user_id: senderId,
+      },
+    },
+  });
+
+  if (!participant) {
     throw new Error("User is not a member of this conversation");
   }
 
-  const [result] = await db.query(
-    "INSERT INTO messages (conversation_id, sender_id, content, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
-    [conversationId, senderId, content],
-  );
+  const message = await prisma.messages.create({
+    data: {
+      conversation_id: conversationId,
+      sender_id: senderId,
+      content,
+      created_at: new Date(),
+    },
+    select: {
+      id: true,
+      conversation_id: true,
+      sender_id: true,
+      content: true,
+      created_at: true,
+    },
+  });
 
-  const [messages] = await db.query(
-    "SELECT id, conversation_id, sender_id, content, created_at FROM messages WHERE id = ?",
-    [result.insertId],
-  );
-
-  return messages;
+  return [message];
 }
 
-async function getMessages(conversationId) {
-  // Kiểm tra user là thành viên của conversation
-  const [participants] = await db.query(
-    "SELECT user_id FROM conversation_participants WHERE conversation_id = ? AND user_id = ?",
-    [conversationId, userId],
-  );
+async function getMessages(conversationId, userId) {
+  conversationId = parseInt(conversationId);
+  userId = parseInt(userId);
 
-  if (!participants.length) {
+  // Kiểm tra user là thành viên của conversation
+  const participant = await prisma.conversation_participants.findUnique({
+    where: {
+      user_id_conversation_id: {
+        conversation_id: conversationId,
+        user_id: userId,
+      },
+    },
+  });
+
+  if (!participant) {
     throw new Error("User is not a member of this conversation");
   }
 
-  const [messages] = await db.query(
-    `SELECT m.id, m.conversation_id, m.sender_id, m.content, m.created_at, u.id as user_id, u.email 
-    FROM messages m
-    JOIN users u ON m.sender_id = u.id
-    WHERE m.conversation_id = ?
-    ORDER BY m.created_at DESC`,
-    [conversationId],
-  );
+  const messages = await prisma.messages.findMany({
+    where: {
+      conversation_id: conversationId,
+    },
+    orderBy: {
+      created_at: "desc",
+    },
+    include: {
+      sender: {
+        select: {
+          id: true,
+          email: true,
+        },
+      },
+    },
+  });
 
-  return messages;
+  // map messages to original format expected by controller
+  return messages.map((m) => ({
+    id: m.id,
+    conversation_id: m.conversation_id,
+    sender_id: m.sender_id,
+    content: m.content,
+    created_at: m.created_at,
+    user_id: m.sender?.id,
+    email: m.sender?.email,
+  }));
 }
 
 module.exports = {

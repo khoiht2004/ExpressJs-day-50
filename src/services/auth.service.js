@@ -4,7 +4,7 @@ const base64 = require("@/utils/base64");
 const crypto = require("node:crypto");
 const generateKey = require("@/utils/generateKey");
 const model = require("@/models/auth.model");
-const db = require("@/database/database");
+const prisma = require("@/utils/prisma");
 const bcrypt = require("bcrypt");
 const queueService = require("@/services/queue.service");
 
@@ -85,15 +85,19 @@ class AuthService {
 
     const userId = payload.sub;
 
-    const query =
-      "SELECT COUNT(*) AS count FROM users WHERE id = ? AND email_verified_at IS NOT NULL";
-    const [[{ count }]] = await db.query(query, [userId]);
+    const count = await prisma.users.count({
+      where: {
+        id: userId,
+        email_verified_at: { not: null },
+      },
+    });
 
     if (count > 0) return [true, null];
 
-    await db.query("UPDATE users SET email_verified_at = now() WHERE id = ?", [
-      userId,
-    ]);
+    await prisma.users.update({
+      where: { id: userId },
+      data: { email_verified_at: new Date() },
+    });
     return [false, null];
   }
 

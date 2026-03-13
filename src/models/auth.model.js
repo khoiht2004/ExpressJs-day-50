@@ -1,6 +1,4 @@
-const db = require("@/database/database");
 const prisma = require("@/utils/prisma");
-const { emit } = require("process");
 
 const register = async (email, password) => {
   const user = await prisma.users.findUnique({
@@ -61,47 +59,68 @@ const getUserById = async (id) => {
 };
 
 const getUserPasswordById = async (id) => {
-  const [rows] = await db.query("SELECT password FROM users WHERE id = ?", [
-    id,
-  ]);
-  if (rows.length === 0) return null;
-  return rows[0].password;
+  const user = await prisma.users.findUnique({
+    where: { id },
+    select: { password: true },
+  });
+  if (!user) return null;
+  return user.password;
 };
 
 const logout = async (token, expiresAt) => {
-  const result = await db.execute(
-    "INSERT INTO revoked_tokens (token, expires_at) VALUES (?, ?)",
-    [token, expiresAt],
-  );
+  const result = await prisma.revoked_tokens.create({
+    data: {
+      token,
+      expires_at: new Date(expiresAt),
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
 
   return result;
 };
 
 const createRefreshToken = async (userId, token, expiresAt) => {
-  const [rows] = await db.query(
-    "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
-    [userId, token, expiresAt],
-  );
+  const result = await prisma.refresh_tokens.create({
+    data: {
+      user_id: userId,
+      token,
+      expires_at: new Date(expiresAt),
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
 
-  return rows;
+  return result;
 };
 
 const getRefreshToken = async (token) => {
-  const [rows] = await db.query(
-    "SELECT id, user_id FROM refresh_tokens WHERE token = ? AND expires_at >= NOW()",
-    [token],
-  );
+  const rows = await prisma.refresh_tokens.findMany({
+    where: {
+      token,
+      expires_at: {
+        gte: new Date(),
+      },
+    },
+    select: {
+      id: true,
+      user_id: true,
+    },
+  });
 
   return rows;
 };
 
 const changePassword = async (id, password) => {
-  const [rows] = await db.execute(
-    "UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?",
-    [password, id],
-  );
+  const result = await prisma.users.update({
+    where: { id },
+    data: {
+      password,
+      updated_at: new Date(),
+    },
+  });
 
-  return rows;
+  return result;
 };
 
 module.exports = {

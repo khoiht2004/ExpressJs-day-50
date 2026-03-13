@@ -1,11 +1,13 @@
-const db = require("@/database/database");
+const prisma = require("@/utils/prisma");
 
 async function cleanupExpiredTokens() {
-  const [{ affectedRows }] = await db.execute(
-    "DELETE FROM revoked_tokens WHERE expires_at < NOW()",
-  );
+  const result = await prisma.revoked_tokens.deleteMany({
+    where: {
+      expires_at: { lt: new Date() },
+    },
+  });
 
-  console.log(`Cleanup ${affectedRows} expired tokens`);
+  console.log(`Cleanup ${result.count} expired tokens`);
 }
 
 module.exports = cleanupExpiredTokens;

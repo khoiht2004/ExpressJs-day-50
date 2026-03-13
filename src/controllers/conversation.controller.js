@@ -95,7 +95,8 @@ async function sendMessages(req, res) {
 
 async function getMessages(req, res) {
   const conversationId = req.params.id;
-  const messages = await model.getMessages(conversationId);
+  const userId = req.auth.user.id;
+  const messages = await model.getMessages(conversationId, userId);
 
   if (!messages || messages.length === 0) {
     return res.success(200, []);
