@@ -1,37 +1,63 @@
 const db = require("@/database/database");
+const prisma = require("@/utils/prisma");
+const { emit } = require("process");
 
 const register = async (email, password) => {
-  const [rows] = await db.query("SELECT email FROM users WHERE email = ?", [
-    email,
-  ]);
-  if (rows.length > 0) return null;
+  const user = await prisma.users.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      password: true,
+      email_verified_at: true,
+    },
+  });
 
-  const [{ insertId }] = await db.execute(
-    "INSERT INTO users (email, password, created_at) VALUES (?, ?, NOW())",
-    [email, password],
-  );
-  const [users] = await db.query("SELECT id, email FROM users WHERE id = ?", [
-    insertId,
-  ]);
+  if (user) return null;
 
-  return users[0];
+  const newUser = await prisma.users.create({
+    data: {
+      email,
+      password,
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+    select: {
+      id: true,
+      email: true,
+      password: true,
+      email_verified_at: true,
+    },
+  });
+
+  return newUser;
 };
 
 const login = async (email) => {
-  const [rows] = await db.query(
-    "SELECT id, email, password, email_verified_at FROM users WHERE email = ?",
-    [email],
-  );
-  if (rows.length === 0) return null;
-  return rows[0];
+  const user = await prisma.users.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      password: true,
+      email_verified_at: true,
+    },
+  });
+  return user;
 };
 
 const getUserById = async (id) => {
-  const [rows] = await db.query("SELECT id, email FROM users WHERE id = ?", [
-    id,
-  ]);
-  if (rows.length === 0) return null;
-  return rows[0];
+  const user = await prisma.users.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      email: true,
+    },
+  });
+
+  if (!user) return null;
+
+  return user;
 };
 
 const getUserPasswordById = async (id) => {
