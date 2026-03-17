@@ -1,4 +1,5 @@
 const model = require("@/models/conversation.model");
+const pusher = require("@/libs/pusher");
 
 async function create(req, res) {
   const { name, type, participant_ids } = req.body;
