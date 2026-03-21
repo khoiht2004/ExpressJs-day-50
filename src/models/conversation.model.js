@@ -20,6 +20,26 @@ async function create(created_by, name, type, participant_ids) {
   return conversation;
 }
 
+// Hàm query kiểm tra existing DM giữa các user
+async function getExistingDirectConversation(participant_ids) {
+  if (participant_ids.length !== 2) return null;
+
+  const [user1, user2] = participant_ids;
+
+  // Tìm cuộc trò chuyện loại 'direct' mà trong đó có chứa CẢ 2 người này
+  const existing = await prisma.conversations.findFirst({
+    where: {
+      type: "direct",
+      AND: [
+        { participants: { some: { user_id: parseInt(user1) } } },
+        { participants: { some: { user_id: parseInt(user2) } } },
+      ],
+    },
+  });
+
+  return existing;
+}
+
 async function getAll(userId) {
   const conversations = await prisma.conversations.findMany({
     where: {
@@ -35,18 +55,45 @@ async function getAll(userId) {
       type: true,
       created_by: true,
       created_at: true,
+      participants: {
+        select: {
+          user: {
+            select: {
+              user_name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      messages: {
+        take: 1,
+        orderBy: {
+          created_at: "desc",
+        },
+        select: {
+          content: true,
+          created_at: true,
+          sender: {
+            select: {
+              id: true,
+              user_name: true,
+            },
+          },
+        },
+      },
     },
     orderBy: {
       created_at: "desc",
     },
   });
 
-  return conversations;
+  return conversations.map((c) => ({
+    ...c,
+    participants: c.participants.map((p) => p.user),
+  }));
 }
 
 async function addParticipants(conversationId, participant_ids) {
-  conversationId = parseInt(conversationId);
-
   const conversation = await prisma.conversations.findUnique({
     where: { id: conversationId },
     select: { type: true },
@@ -94,7 +141,6 @@ async function addParticipants(conversationId, participant_ids) {
 }
 
 async function sendMessages(conversationId, content, senderId) {
-  conversationId = parseInt(conversationId);
   senderId = parseInt(senderId);
 
   // Kiểm tra user là thành viên của conversation
@@ -108,7 +154,7 @@ async function sendMessages(conversationId, content, senderId) {
   });
 
   if (!participant) {
-    throw new Error("User is not a member of this conversation");
+    return [null, "User is not a member of this conversation"];
   }
 
   const message = await prisma.messages.create({
@@ -127,11 +173,10 @@ async function sendMessages(conversationId, content, senderId) {
     },
   });
 
-  return [message];
+  return [message, null];
 }
 
 async function getMessages(conversationId, userId) {
-  conversationId = parseInt(conversationId);
   userId = parseInt(userId);
 
   // Kiểm tra user là thành viên của conversation
@@ -145,7 +190,7 @@ async function getMessages(conversationId, userId) {
   });
 
   if (!participant) {
-    throw new Error("User is not a member of this conversation");
+    return [null, "User is not a member of this conversation"];
   }
 
   const messages = await prisma.messages.findMany({
@@ -160,21 +205,79 @@ async function getMessages(conversationId, userId) {
         select: {
           id: true,
           email: true,
+          user_name: true,
         },
       },
     },
   });
 
-  // map messages to original format expected by controller
-  return messages.map((m) => ({
-    id: m.id,
-    conversation_id: m.conversation_id,
-    sender_id: m.sender_id,
-    content: m.content,
-    created_at: m.created_at,
-    user_id: m.sender?.id,
-    email: m.sender?.email,
-  }));
+  return [
+    messages.map((m) => ({
+      id: m.id,
+      conversation_id: m.conversation_id,
+      sender_id: m.sender_id,
+      content: m.content,
+      created_at: m.created_at,
+      user_id: m.sender?.id,
+      email: m.sender?.email,
+      user_name: m.sender?.user_name,
+    })),
+    null,
+  ];
+}
+
+async function createDirectMessages(senderId, receiverId, content) {
+  senderId = parseInt(senderId);
+  receiverId = parseInt(receiverId);
+
+  // Thường thì tự nhắn cho bản thân cần 1 logic phòng khác, tạm thời chặn
+  if (senderId === receiverId) {
+    return [null, "Cannot send direct message to yourself"];
+  }
+
+  const participant_ids = [senderId, receiverId];
+
+  // 1. Dùng bộ lọc check coi đã có phòng chưa
+  const existing = await getExistingDirectConversation(participant_ids);
+  let conversationId;
+
+  if (existing) {
+    // Có rồi thì bê luôn ID ra xài
+    conversationId = existing.id;
+  } else {
+    // 2. Móm thì tạo phòng mới toanh
+    const newConversation = await prisma.conversations.create({
+      data: {
+        created_by: senderId.toString(),
+        type: "direct",
+        created_at: new Date(),
+        participants: {
+          create: [{ user_id: senderId }, { user_id: receiverId }],
+        },
+      },
+    });
+    conversationId = newConversation.id;
+  }
+
+  // 3. Phệt tin nhắn vào lưu bảng messages
+  const message = await prisma.messages.create({
+    data: {
+      conversation_id: conversationId,
+      sender_id: senderId,
+      content,
+      created_at: new Date(),
+    },
+    select: {
+      id: true,
+      conversation_id: true,
+      sender_id: true,
+      content: true,
+      created_at: true,
+    },
+  });
+
+  // Trả về kết quả
+  return [message, null];
 }
 
 module.exports = {
@@ -183,4 +286,6 @@ module.exports = {
   addParticipants,
   sendMessages,
   getMessages,
+  getExistingDirectConversation,
+  createDirectMessages,
 };

@@ -25,7 +25,7 @@ app.use(express.json());
 // Middlewares
 app.use(responseFormat);
 
-app.use("/api", apiRateLimiter);
+// app.use("/api", apiRateLimiter);
 app.use("/api", router);
 
 // 404 và Error handlers cuối cùng
