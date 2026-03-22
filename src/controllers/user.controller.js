@@ -16,4 +16,17 @@ async function searchUserByEmail(req, res) {
   return res.success(200, users);
 }
 
-module.exports = { searchUserByEmail };
+async function searchUserByName(req, res) {
+  const { q } = req.query;
+  const currentUserEmail = req.auth.user.email;
+
+  if (!currentUserEmail) return res.error(401, "Unauthorized");
+
+  const users = await model.searchUserByName(currentUserEmail, q);
+
+  if (!users || users.length === 0) return res.success(200, []);
+
+  return res.success(200, users);
+}
+
+module.exports = { searchUserByEmail, searchUserByName };

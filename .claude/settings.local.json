@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(npm uninstall @prisma/adapter-mariadb)",
-      "Bash(npx prisma generate)"
-    ]
-  }
-}

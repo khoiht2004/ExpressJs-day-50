@@ -11,4 +11,15 @@ async function searchUserByEmail(currentUserEmail, q) {
   return users;
 }
 
-module.exports = { searchUserByEmail };
+async function searchUserByName(currentUserEmail, q) {
+  const users = await prisma.users.findMany({
+    where: {
+      user_name: { contains: q },
+      NOT: { email: currentUserEmail },
+    },
+    select: { id: true, email: true, user_name: true },
+  });
+  return users;
+}
+
+module.exports = { searchUserByEmail, searchUserByName };
