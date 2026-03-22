@@ -18,6 +18,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/adapter-mariadb": "^7.5.0",
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.4.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "cron": "^4.4.0",
@@ -28,9 +31,13 @@
     "jsonwebtoken": "^9.0.3",
     "module-alias": "^2.3.4",
     "mysql2": "^3.16.3",
-    "nodemailer": "^8.0.1"
+    "nodemailer": "^8.0.1",
+    "pg": "^8.20.0",
+    "pusher": "^5.3.2"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@types/node": "^25.3.3",
+    "concurrently": "^9.2.1",
+    "prisma": "^7.4.2"
   }
 }

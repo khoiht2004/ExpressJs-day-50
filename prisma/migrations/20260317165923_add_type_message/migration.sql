@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `messages` ADD COLUMN `type` VARCHAR(50) NULL DEFAULT 'text';

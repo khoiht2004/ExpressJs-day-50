@@ -1,12 +1,10 @@
-const db = require("@/database/database");
+const prisma = require("@/utils/prisma");
 
 const isRevoked = async (token) => {
-  const [rows] = await db.query(
-    "SELECT count(*) as count FROM revoked_tokens WHERE token = ?",
-    [token],
-  );
-  if (rows.length === 0) return false;
-  return rows[0]["count"];
+  const count = await prisma.revoked_tokens.count({
+    where: { token },
+  });
+  return count > 0 ? 1 : 0;
 };
 
 module.exports = { isRevoked };

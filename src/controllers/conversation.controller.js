@@ -1,4 +1,5 @@
 const model = require("@/models/conversation.model");
+const pusher = require("@/libs/pusher");
 
 async function create(req, res) {
   const { name, type, participant_ids } = req.body;
@@ -33,6 +34,14 @@ async function create(req, res) {
     // Dùng Set để loại bỏ các participant trùng lặp
     const allParticipants = [...new Set([...participant_ids, created_by])];
 
+    if (type === "direct") {
+      const existingDm =
+        await model.getExistingDirectConversation(allParticipants);
+      if (existingDm) {
+        return res.success(200, existingDm);
+      }
+    }
+
     const conversation = await model.create(
       created_by,
       name || null,
@@ -43,7 +52,7 @@ async function create(req, res) {
     return res.success(201, conversation);
   } catch (error) {
     console.error(error);
-    return res.error(409, "Failed to create conversation");
+    return res.error(500, "Internal Server Error");
   }
 }
 
@@ -84,29 +93,46 @@ async function sendMessages(req, res) {
     return res.error(400, "Message content cannot be empty");
   }
 
-  const [messages] = await model.sendMessages(
+  const [data, error] = await model.sendMessages(
     conversationId,
     content,
     senderId,
   );
 
-  return res.success(201, messages);
+  if (error && !data) {
+    return res.error(403, error);
+  }
+
+  // Bắn event
+  pusher.trigger(`conversation-${conversationId}`, "sended", data);
+
+  return res.success(201, data);
 }
 
 async function getMessages(req, res) {
   const conversationId = req.params.id;
-  const messages = await model.getMessages(conversationId);
+  const userId = req.auth.user.id;
+  const { limit, before } = req.query;
 
-  if (!messages || messages.length === 0) {
-    return res.success(200, []);
+  const [data, error] = await model.getMessages(
+    conversationId,
+    userId,
+    limit,
+    before,
+  );
+
+  if (error && !data) {
+    return res.error(404, error);
   }
 
-  const response = messages.map((message) => {
+  const responseMessages = data.messages.map((message) => {
     return {
+      id: message.id, // Bắn kèm id để FE lấy làm before cho trang tiếp theo
       conversation_id: message.conversation_id,
       sender_id: message.sender_id,
       user: {
         id: message.user_id,
+        user_name: message.user_name,
         email: message.email,
       },
       content: message.content,
@@ -114,7 +140,40 @@ async function getMessages(req, res) {
     };
   });
 
-  return res.success(200, response);
+  return res.success(200, {
+    messages: responseMessages,
+    hasMore: data.hasMore,
+  });
+}
+
+async function createDirectMessages(req, res) {
+  const { receiver_id, content } = req.body;
+  const senderId = req.auth.user.id;
+
+  if (!receiver_id) {
+    return res.error(400, "receiver_id is required");
+  }
+
+  if (!content || typeof content !== "string" || content.trim() === "") {
+    return res.error(400, "Message content cannot be empty");
+  }
+
+  try {
+    const [data, error] = await model.createDirectMessages(
+      senderId,
+      receiver_id,
+      content
+    );
+
+    if (error && !data) {
+      return res.error(400, error);
+    }
+
+    return res.success(201, data);
+  } catch (error) {
+    console.error(error);
+    return res.error(500, "Internal Server Error");
+  }
 }
 
 module.exports = {
@@ -123,4 +182,5 @@ module.exports = {
   addParticipants,
   sendMessages,
   getMessages,
+  createDirectMessages,
 };

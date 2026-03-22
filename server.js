@@ -14,7 +14,11 @@ const app = express();
 
 // Cấu hình CORS
 const corsOptions = {
-  origin: ["http://localhost:5173", "https://khoiht2004.github.io"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://khoiht2004.github.io",
+  ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   optionsSuccessStatus: 200,
 };
@@ -25,7 +29,7 @@ app.use(express.json());
 // Middlewares
 app.use(responseFormat);
 
-app.use("/api", apiRateLimiter);
+// app.use("/api", apiRateLimiter);
 app.use("/api", router);
 
 // 404 và Error handlers cuối cùng

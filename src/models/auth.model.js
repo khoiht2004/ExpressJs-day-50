@@ -1,81 +1,127 @@
-const db = require("@/database/database");
+const prisma = require("@/utils/prisma");
 
 const register = async (email, password) => {
-  const [rows] = await db.query("SELECT email FROM users WHERE email = ?", [
-    email,
-  ]);
-  if (rows.length > 0) return null;
+  const user = await prisma.users.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      password: true,
+      email_verified_at: true,
+    },
+  });
 
-  const [{ insertId }] = await db.execute(
-    "INSERT INTO users (email, password, created_at) VALUES (?, ?, NOW())",
-    [email, password],
-  );
-  const [users] = await db.query("SELECT id, email FROM users WHERE id = ?", [
-    insertId,
-  ]);
+  if (user) return null;
 
-  return users[0];
+  const newUser = await prisma.users.create({
+    data: {
+      email,
+      password,
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+    select: {
+      id: true,
+      email: true,
+      password: true,
+      email_verified_at: true,
+    },
+  });
+
+  return newUser;
 };
 
 const login = async (email) => {
-  const [rows] = await db.query(
-    "SELECT id, email, password, email_verified_at FROM users WHERE email = ?",
-    [email],
-  );
-  if (rows.length === 0) return null;
-  return rows[0];
+  const user = await prisma.users.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      password: true,
+      email_verified_at: true,
+    },
+  });
+  return user;
 };
 
 const getUserById = async (id) => {
-  const [rows] = await db.query("SELECT id, email FROM users WHERE id = ?", [
-    id,
-  ]);
-  if (rows.length === 0) return null;
-  return rows[0];
+  const user = await prisma.users.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      user_name: true,
+      email: true,
+    },
+  });
+
+  if (!user) return null;
+
+  return user;
 };
 
 const getUserPasswordById = async (id) => {
-  const [rows] = await db.query("SELECT password FROM users WHERE id = ?", [
-    id,
-  ]);
-  if (rows.length === 0) return null;
-  return rows[0].password;
+  const user = await prisma.users.findUnique({
+    where: { id },
+    select: { password: true },
+  });
+  if (!user) return null;
+  return user.password;
 };
 
 const logout = async (token, expiresAt) => {
-  const result = await db.execute(
-    "INSERT INTO revoked_tokens (token, expires_at) VALUES (?, ?)",
-    [token, expiresAt],
-  );
+  const result = await prisma.revoked_tokens.create({
+    data: {
+      token,
+      expires_at: new Date(expiresAt),
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
 
   return result;
 };
 
 const createRefreshToken = async (userId, token, expiresAt) => {
-  const [rows] = await db.query(
-    "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
-    [userId, token, expiresAt],
-  );
+  const result = await prisma.refresh_tokens.create({
+    data: {
+      user_id: userId,
+      token,
+      expires_at: new Date(expiresAt),
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
 
-  return rows;
+  return result;
 };
 
 const getRefreshToken = async (token) => {
-  const [rows] = await db.query(
-    "SELECT id, user_id FROM refresh_tokens WHERE token = ? AND expires_at >= NOW()",
-    [token],
-  );
+  const rows = await prisma.refresh_tokens.findMany({
+    where: {
+      token,
+      expires_at: {
+        gte: new Date(),
+      },
+    },
+    select: {
+      id: true,
+      user_id: true,
+    },
+  });
 
   return rows;
 };
 
 const changePassword = async (id, password) => {
-  const [rows] = await db.execute(
-    "UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?",
-    [password, id],
-  );
+  const result = await prisma.users.update({
+    where: { id },
+    data: {
+      password,
+      updated_at: new Date(),
+    },
+  });
 
-  return rows;
+  return result;
 };
 
 module.exports = {
