@@ -73,12 +73,12 @@ async function getAll(userId) {
         select: {
           content: true,
           created_at: true,
-          sender: {
-            select: {
-              id: true,
-              user_name: true,
-            },
-          },
+          // sender: {
+          //   select: {
+          //     id: true,
+          //     user_name: true,
+          //   },
+          // },
         },
       },
     },
@@ -176,8 +176,9 @@ async function sendMessages(conversationId, content, senderId) {
   return [message, null];
 }
 
-async function getMessages(conversationId, userId) {
+async function getMessages(conversationId, userId, limit = 20, before = null) {
   userId = parseInt(userId);
+  const parsedLimit = parseInt(limit) || 20;
 
   // Kiểm tra user là thành viên của conversation
   const participant = await prisma.conversation_participants.findUnique({
@@ -193,13 +194,24 @@ async function getMessages(conversationId, userId) {
     return [null, "User is not a member of this conversation"];
   }
 
-  const messages = await prisma.messages.findMany({
-    where: {
-      conversation_id: conversationId,
-    },
+  // Lắp ghép query
+  const whereCondition = {
+    conversation_id: conversationId,
+  };
+
+  if (before) {
+    whereCondition.id = {
+      lt: parseInt(before),
+    };
+  }
+
+  // Chủ ý bốc lên limit + 1 dòng để xem còn tin nhắn thừa (cũ hơn) ở backend không
+  const rawMessages = await prisma.messages.findMany({
+    where: whereCondition,
     orderBy: {
       created_at: "desc",
     },
+    take: parsedLimit + 1,
     include: {
       sender: {
         select: {
@@ -211,17 +223,35 @@ async function getMessages(conversationId, userId) {
     },
   });
 
+  // Nếu số lượng lôi ra ĐÚNG BẰNG giới hạn mồi (lớn hơn limit thật sự)
+  // Tức là CÒN dữ liệu nữa
+  const hasMore = rawMessages.length > parsedLimit;
+
+  // Chặt chặng mồi đi, chỉ lấy đủ limit trả cho khách
+  const messagesToReturn = hasMore
+    ? rawMessages.slice(0, parsedLimit)
+    : rawMessages;
+
+  // Gắp ra rồi thì phải Đảo ngược mảng để cũ nhô lên đầu (trên cùng màn hình)
+  const reversedMessages = messagesToReturn.reverse();
+
+  const formattedMessages = reversedMessages.map((m) => ({
+    id: m.id,
+    conversation_id: m.conversation_id,
+    sender_id: m.sender_id,
+    content: m.content,
+    created_at: m.created_at,
+    user_id: m.sender?.id,
+    email: m.sender?.email,
+    user_name: m.sender?.user_name,
+  }));
+
+  // Gói gọn chung thuyền đưa về
   return [
-    messages.map((m) => ({
-      id: m.id,
-      conversation_id: m.conversation_id,
-      sender_id: m.sender_id,
-      content: m.content,
-      created_at: m.created_at,
-      user_id: m.sender?.id,
-      email: m.sender?.email,
-      user_name: m.sender?.user_name,
-    })),
+    {
+      messages: formattedMessages,
+      hasMore,
+    },
     null,
   ];
 }

@@ -49,6 +49,7 @@ const getUserById = async (id) => {
     where: { id },
     select: {
       id: true,
+      user_name: true,
       email: true,
     },
   });

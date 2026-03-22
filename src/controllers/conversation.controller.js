@@ -1,4 +1,5 @@
 const model = require("@/models/conversation.model");
+const pusher = require("@/libs/pusher");
 
 async function create(req, res) {
   const { name, type, participant_ids } = req.body;
@@ -102,20 +103,31 @@ async function sendMessages(req, res) {
     return res.error(403, error);
   }
 
+  // Bắn event
+  pusher.trigger(`conversation-${conversationId}`, "sended", data);
+
   return res.success(201, data);
 }
 
 async function getMessages(req, res) {
   const conversationId = req.params.id;
   const userId = req.auth.user.id;
-  const [data, error] = await model.getMessages(conversationId, userId);
+  const { limit, before } = req.query;
+
+  const [data, error] = await model.getMessages(
+    conversationId,
+    userId,
+    limit,
+    before,
+  );
 
   if (error && !data) {
     return res.error(404, error);
   }
 
-  const response = data.map((message) => {
+  const responseMessages = data.messages.map((message) => {
     return {
+      id: message.id, // Bắn kèm id để FE lấy làm before cho trang tiếp theo
       conversation_id: message.conversation_id,
       sender_id: message.sender_id,
       user: {
@@ -128,7 +140,10 @@ async function getMessages(req, res) {
     };
   });
 
-  return res.success(200, response);
+  return res.success(200, {
+    messages: responseMessages,
+    hasMore: data.hasMore,
+  });
 }
 
 async function createDirectMessages(req, res) {
