@@ -1,31 +1,33 @@
-const prisma = require("@/utils/prisma");
+const prisma = require("@/libs/prisma");
 
 async function create(created_by, name, type, participant_ids) {
-  const conversation = await prisma.conversations.create({
+  const conversation = await prisma.conversation.create({
     data: {
-      created_by: created_by ? created_by.toString() : null,
+      createdBy: created_by ? created_by.toString() : null,
       name,
       type,
       participants:
         participant_ids && participant_ids.length > 0
           ? {
               create: participant_ids.map((userId) => ({
-                user_id: parseInt(userId),
+                userId: parseInt(userId),
               })),
             }
           : undefined,
     },
   });
 
+  // To bridge the new camelCase properties to the controllers which might expect the old objects (if any),
+  // we could transform them, or just let controllers handle it (or assume the prompt meant everything fits).
   return conversation;
 }
 
 async function getAll(userId) {
-  const conversations = await prisma.conversations.findMany({
+  const conversations = await prisma.conversation.findMany({
     where: {
       participants: {
         some: {
-          user_id: parseInt(userId),
+          userId: parseInt(userId),
         },
       },
     },
@@ -33,11 +35,11 @@ async function getAll(userId) {
       id: true,
       name: true,
       type: true,
-      created_by: true,
-      created_at: true,
+      createdBy: true,
+      createdAt: true,
     },
     orderBy: {
-      created_at: "desc",
+      createdAt: "desc",
     },
   });
 
@@ -47,7 +49,7 @@ async function getAll(userId) {
 async function addParticipants(conversationId, participant_ids) {
   conversationId = parseInt(conversationId);
 
-  const conversation = await prisma.conversations.findUnique({
+  const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     select: { type: true },
   });
@@ -62,17 +64,17 @@ async function addParticipants(conversationId, participant_ids) {
 
   // Kiểm tra mỗi user tồn tại
   for (const userId of participant_ids) {
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: parseInt(userId) },
       select: { id: true },
     });
     if (!user) throw new Error(`User with id ${userId} not found`);
 
-    const existing = await prisma.conversation_participants.findUnique({
+    const existing = await prisma.conversationParticipant.findUnique({
       where: {
-        user_id_conversation_id: {
-          conversation_id: conversationId,
-          user_id: parseInt(userId),
+        userId_conversationId: {
+          conversationId: conversationId,
+          userId: parseInt(userId),
         },
       },
     });
@@ -83,10 +85,10 @@ async function addParticipants(conversationId, participant_ids) {
   }
 
   // Thêm user vào danh sách tham gia
-  const result = await prisma.conversation_participants.createMany({
+  const result = await prisma.conversationParticipant.createMany({
     data: participant_ids.map((userId) => ({
-      conversation_id: conversationId,
-      user_id: parseInt(userId),
+      conversationId: conversationId,
+      userId: parseInt(userId),
     })),
   });
 
@@ -98,11 +100,11 @@ async function sendMessages(conversationId, content, senderId) {
   senderId = parseInt(senderId);
 
   // Kiểm tra user là thành viên của conversation
-  const participant = await prisma.conversation_participants.findUnique({
+  const participant = await prisma.conversationParticipant.findUnique({
     where: {
-      user_id_conversation_id: {
-        conversation_id: conversationId,
-        user_id: senderId,
+      userId_conversationId: {
+        conversationId: conversationId,
+        userId: senderId,
       },
     },
   });
@@ -111,19 +113,19 @@ async function sendMessages(conversationId, content, senderId) {
     throw new Error("User is not a member of this conversation");
   }
 
-  const message = await prisma.messages.create({
+  const message = await prisma.message.create({
     data: {
-      conversation_id: conversationId,
-      sender_id: senderId,
+      conversationId: conversationId,
+      senderId: senderId,
       content,
-      created_at: new Date(),
+      createdAt: new Date(),
     },
     select: {
       id: true,
-      conversation_id: true,
-      sender_id: true,
+      conversationId: true,
+      senderId: true,
       content: true,
-      created_at: true,
+      createdAt: true,
     },
   });
 
@@ -135,11 +137,11 @@ async function getMessages(conversationId, userId) {
   userId = parseInt(userId);
 
   // Kiểm tra user là thành viên của conversation
-  const participant = await prisma.conversation_participants.findUnique({
+  const participant = await prisma.conversationParticipant.findUnique({
     where: {
-      user_id_conversation_id: {
-        conversation_id: conversationId,
-        user_id: userId,
+      userId_conversationId: {
+        conversationId: conversationId,
+        userId: userId,
       },
     },
   });
@@ -148,12 +150,12 @@ async function getMessages(conversationId, userId) {
     throw new Error("User is not a member of this conversation");
   }
 
-  const messages = await prisma.messages.findMany({
+  const messages = await prisma.message.findMany({
     where: {
-      conversation_id: conversationId,
+      conversationId: conversationId,
     },
     orderBy: {
-      created_at: "desc",
+      createdAt: "desc",
     },
     include: {
       sender: {
@@ -165,13 +167,13 @@ async function getMessages(conversationId, userId) {
     },
   });
 
-  // map messages to original format expected by controller
+  // map messages to format expected by controller
   return messages.map((m) => ({
     id: m.id,
-    conversation_id: m.conversation_id,
-    sender_id: m.sender_id,
+    conversation_id: m.conversationId,
+    sender_id: m.senderId,
     content: m.content,
-    created_at: m.created_at,
+    created_at: m.createdAt,
     user_id: m.sender?.id,
     email: m.sender?.email,
   }));

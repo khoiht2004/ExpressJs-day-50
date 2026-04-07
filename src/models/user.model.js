@@ -1,7 +1,7 @@
-const prisma = require("@/utils/prisma");
+const prisma = require("@/libs/prisma");
 
 async function searchUserByEmail(currentUserEmail, q) {
-  const users = await prisma.users.findMany({
+  const users = await prisma.user.findMany({
     where: {
       email: { contains: q },
       NOT: { email: currentUserEmail },

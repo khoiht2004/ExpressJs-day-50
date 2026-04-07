@@ -1,36 +1,33 @@
-const prisma = require("@/utils/prisma");
+const prisma = require("@/libs/prisma");
 
 class QueueService {
   async push(type, payload, isPriority = 0) {
     const jsonPayload = JSON.stringify(payload);
-    await prisma.queues.create({
+    await prisma.queue.create({
       data: {
         type,
         payload: jsonPayload,
-        is_priority: isPriority,
+        isPriority: isPriority,
       },
     });
   }
 
   async getPendingJobs() {
-    const firstJob = await prisma.queues.findFirst({
+    const firstJob = await prisma.queue.findFirst({
       where: {
         status: "pending",
       },
-      orderBy: [
-        { is_priority: "desc" },
-        { id: "asc" },
-      ],
+      orderBy: [{ isPriority: "desc" }, { id: "asc" }],
     });
     return firstJob;
   }
 
   async updateStatus(id, status, info = null) {
-    await prisma.queues.update({
+    await prisma.queue.update({
       where: { id },
       data: {
         status,
-        updated_at: new Date(),
+        updatedAt: new Date(),
         info: info ? String(info) : null,
       },
     });

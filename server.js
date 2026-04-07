@@ -6,8 +6,9 @@ const {
   notFoundHandler,
   exceptionHandler,
   responseFormat,
+  handleMulterError,
+  apiRateLimiter,
 } = require("@/middlewares");
-const { apiRateLimiter } = require("@/middlewares/rateLimiter");
 const router = require("@/routes");
 
 const app = express();
@@ -21,14 +22,16 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(express.static("public"));
 
 // Middlewares
 app.use(responseFormat);
 
-app.use("/api", apiRateLimiter);
+// app.use("/api", apiRateLimiter);
 app.use("/api", router);
 
 // 404 và Error handlers cuối cùng
+app.use(handleMulterError);
 app.use(notFoundHandler);
 app.use(exceptionHandler);
 

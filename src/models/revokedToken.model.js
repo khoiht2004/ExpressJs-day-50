@@ -1,7 +1,7 @@
-const prisma = require("@/utils/prisma");
+const prisma = require("@/libs/prisma");
 
 const isRevoked = async (token) => {
-  const count = await prisma.revoked_tokens.count({
+  const count = await prisma.revokedToken.count({
     where: { token },
   });
   return count > 0 ? 1 : 0;

@@ -53,7 +53,7 @@ async function login(req, res) {
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (isMatch) {
-    if (!user.email_verified_at) {
+    if (!user.emailVerifiedAt) {
       return res.error(403, "Account not verified");
     }
 
@@ -93,7 +93,7 @@ async function refreshToken(req, res) {
   const refreshTokenDB = await model.getRefreshToken(refresh_token);
   if (!refreshTokenDB) res.error(401, "Refresh token is invalid");
 
-  const user = await model.getUserById(refreshTokenDB[0].user_id);
+  const user = await model.getUserById(refreshTokenDB[0].userId);
 
   const { accessToken } = await AuthService.signAccessToken(user);
   const refreshToken = await AuthService.createRefreshToken(user);

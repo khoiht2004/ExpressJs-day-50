@@ -1,30 +1,30 @@
-const prisma = require("@/utils/prisma");
+const prisma = require("@/libs/prisma");
 
 const register = async (email, password) => {
-  const user = await prisma.users.findUnique({
+  const user = await prisma.user.findUnique({
     where: { email },
     select: {
       id: true,
       email: true,
       password: true,
-      email_verified_at: true,
+      emailVerifiedAt: true,
     },
   });
 
   if (user) return null;
 
-  const newUser = await prisma.users.create({
+  const newUser = await prisma.user.create({
     data: {
       email,
       password,
-      created_at: new Date(),
-      updated_at: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
     select: {
       id: true,
       email: true,
       password: true,
-      email_verified_at: true,
+      emailVerifiedAt: true,
     },
   });
 
@@ -32,20 +32,20 @@ const register = async (email, password) => {
 };
 
 const login = async (email) => {
-  const user = await prisma.users.findUnique({
+  const user = await prisma.user.findUnique({
     where: { email },
     select: {
       id: true,
       email: true,
       password: true,
-      email_verified_at: true,
+      emailVerifiedAt: true,
     },
   });
   return user;
 };
 
 const getUserById = async (id) => {
-  const user = await prisma.users.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id },
     select: {
       id: true,
@@ -59,7 +59,7 @@ const getUserById = async (id) => {
 };
 
 const getUserPasswordById = async (id) => {
-  const user = await prisma.users.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id },
     select: { password: true },
   });
@@ -68,12 +68,12 @@ const getUserPasswordById = async (id) => {
 };
 
 const logout = async (token, expiresAt) => {
-  const result = await prisma.revoked_tokens.create({
+  const result = await prisma.revokedToken.create({
     data: {
       token,
-      expires_at: new Date(expiresAt),
-      created_at: new Date(),
-      updated_at: new Date(),
+      expiresAt: new Date(expiresAt),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
   });
 
@@ -81,13 +81,13 @@ const logout = async (token, expiresAt) => {
 };
 
 const createRefreshToken = async (userId, token, expiresAt) => {
-  const result = await prisma.refresh_tokens.create({
+  const result = await prisma.refreshToken.create({
     data: {
-      user_id: userId,
+      userId,
       token,
-      expires_at: new Date(expiresAt),
-      created_at: new Date(),
-      updated_at: new Date(),
+      expiresAt: new Date(expiresAt),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
   });
 
@@ -95,16 +95,16 @@ const createRefreshToken = async (userId, token, expiresAt) => {
 };
 
 const getRefreshToken = async (token) => {
-  const rows = await prisma.refresh_tokens.findMany({
+  const rows = await prisma.refreshToken.findMany({
     where: {
       token,
-      expires_at: {
+      expiresAt: {
         gte: new Date(),
       },
     },
     select: {
       id: true,
-      user_id: true,
+      userId: true,
     },
   });
 
@@ -112,11 +112,11 @@ const getRefreshToken = async (token) => {
 };
 
 const changePassword = async (id, password) => {
-  const result = await prisma.users.update({
+  const result = await prisma.user.update({
     where: { id },
     data: {
       password,
-      updated_at: new Date(),
+      updatedAt: new Date(),
     },
   });
 
